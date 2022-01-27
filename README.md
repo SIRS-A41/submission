@@ -483,17 +483,16 @@ On your machine or on the `user` machine:
     bag history
     ```
     
-16. Pull an older commit:
+16. Checkout an older commit:
 
     ```bash
-    bag pull <commit-version>
+    bag checkout <commit-version>
     ```
 
 
 ## Demo
 
-Give a tour of the best features of the application.
-Add screenshots when relevant.
+<!-- TODO: Give a tour of the best features of the application. Add screenshots when relevant. -->
 
 ## Additional Information
 
