@@ -319,10 +319,11 @@ The [`firewalls`](https://github.com/SIRS-A41/firewalls.git) repo contains a scr
     ssh-copy-id -i ~/.ssh/id_rsa.pub sirs@192.168.4.1
     ```
 
-5. Create a cronjob for backing up the project files on the Resources server `crontab -e`. Add the following line:
+5. Create a cronjob for backing up the project files on the Resources server `sudo crontab -e`. Add the following line:
 
     ```
     0 * * * * /home/back/backup/backup.sh
+    30 */24 * * * /usr/bin/python3 /home/backup/backup-script.py
     ```
 
 
