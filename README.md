@@ -4,9 +4,34 @@ We present a solution that allows users to create projects, commit versions, rev
 
 Each project has its own symmetric key which is used to encrypt every file before it is submitted to the server. Project keys are safely stored in the remote server using users' asymmetric key pairs.
 
+The document is divided as follows:
 
-
-<!-- TODO: Give them a summary of the information you will include in your ReadMe using clearly defined sections. -->
+  - [General Information](#general-information)
+    - [Built With](#built-with)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+      - [Single machine](#single-machine)
+      - [Multiple machines (using VMs)](#multiple-machines-using-vms)
+    - [Installing](#installing)
+      - [Single machine (easier)](#single-machine-easier)
+      - [Multiple machines](#multiple-machines)
+        - [Auth Server](#auth-server)
+        - [Auth REST API](#auth-rest-api)
+        - [Resources Server](#resources-server)
+        - [Resources REST API](#resources-rest-api)
+        - [Backup Server](#backup-server)
+        - [Firewall / Reverse Proxy Server](#firewall--reverse-proxy-server)
+        - [User](#user)
+    - [Testing](#testing)
+  - [Demo](#demo)
+    - [Mongo Express](#mongo-express)
+      - [User Projects](#user-projects)
+      - [Project History](#project-history)
+    - [Redis Commander](#redis-commander)
+      - [List of Users](#list-of-users)
+  - [Additional Information](#additional-information)
+    - [Authors](#authors)
+    - [License](#license)
 
 ## General Information
 
@@ -41,8 +66,6 @@ These instructions will get you a copy of the project up and running on your loc
 ### Prerequisites
 
 There are two options for implementing the developed solution. Self-host all the application in a single machine or divide the application through different machines.
-
-<!-- TODO: In this section also include detailed instructions for installing additiona software the application is dependent upon (such as PostgreSQL database, for example).  -->
 
 You can start by installing [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
 
@@ -82,7 +105,7 @@ You will require a computer running Linux. Since our solution uses Docker, it mi
 
 You'll need an architecture as the one depicted in the Figure below:
 
-<!--  TODO: adicionar figura -->
+![machines diagram](https://github.com/SIRS-A41/submission/raw/main/images/SIRS-machines.png)
 
 Since multiple machines are involved, it is required to setup firewalls for each machine.
 
@@ -91,7 +114,7 @@ Since multiple machines are involved, it is required to setup firewalls for each
 git clone https://github.com/SIRS-A41/firewalls.git
 ```
 
-And also install [nginx](https://www.nginx.com/) to work as a reverse proxy:
+And also install [nginx](https://www.nginx.com/) on the Firewall machine to work as a reverse proxy:
 
 ```
 sudo apt install nginx
@@ -149,7 +172,7 @@ sudo systemctl start nginx
 
     ```bash
     cd ~/Downloads/certificates
-    ./generate_certificate.sh <your-local-ip>
+    ./generate_certificate.sh $IP
     sudo ./import_certificate.sh
     ```
 
@@ -166,12 +189,13 @@ sudo systemctl start nginx
 
     ```bash
     cd ~/Downloads/auth-api
-    cp -r ~/Downloads/certificates certificates
+    cp -r ~/Downloads/certificates .
     ```
 
 11. You can now build the docker image and run it in a container:
 
     ```bash
+    cd ~/Downloads/auth-api
     docker build --no-cache -t auth-api .
     docker run -p 8443:8443 -p 8445:8445 auth-api
     ```
@@ -187,12 +211,13 @@ sudo systemctl start nginx
 
     ```bash
     cd ~/Downloads/resources-api
-    cp -r ../certificates certificates
+    cp -r ~/Downloads/certificates .
     ```
 
 14. You can now build the docker image and run it in a container:
 
     ```bash
+    cd ~/Downloads/resources-api
     docker build --no-cache -t resources-api .
     docker run -p 8444:8444 resources-api
     ```
@@ -218,6 +243,24 @@ sudo systemctl start nginx
 18. Run the bag client:
     ```bash
     bag
+    ```
+    Output:
+    ```
+    Instructions:
+    bag register - Create an account
+    bag login - Login to account
+    bag user - Get current user
+    bag logout - Logout of your account
+    bag keys - Generate asymmetric key pair
+    bag private - Set private key
+    bag create <project-name> - Create a new project named <project-name>
+    bag clone <project-name> - Clone project named <project-name>
+    bag share <username> - Share project with <username>
+    bag history - Show project history
+    bag push - Push current project files to remote server
+    bag pull - Pull current project files from remote server
+    bag checkout <commit-version> - Pull <commit-version> project files from remote server
+    bag projects - Show user's projects
     ```
 
 *Note: the backup server is not setup when using a single machine, however, you can still do it following the instructions below.*
@@ -334,10 +377,15 @@ The [`firewalls`](https://github.com/SIRS-A41/firewalls.git) repo contains a scr
     ssh-copy-id -i ~/.ssh/id_rsa.pub sirs@192.168.4.1
     ```
 
-5. Create a cronjob for backing up the project files on the Resources server `sudo crontab -e`. Add the following line:
+5. Create a cronjob for backing up the project files on the Resources server `sudo crontab -e`. Add one of the following lines:
 
+    **Simpler version using only scp:**
     ```
     0 * * * * /home/back/backup/backup.sh
+    ```
+
+    **Version using btrfs, zip, and scp:**
+    ```
     30 */24 * * * /usr/bin/python3 /home/backup/backup-script.py
     ```
 
@@ -412,6 +460,15 @@ On your machine or on the `user` machine:
     bag register
     ```
 
+    Expected output:
+    ```
+    Enter your username: alice
+    Enter your password: 
+    Confirm your password: 
+    Creating an account for user: alice...
+    Account successfuly created
+    ```
+
 2. Create another account but for `bob`.
 
 3. Login to `alice`'s account:
@@ -420,12 +477,24 @@ On your machine or on the `user` machine:
     bag login
     ```
 
+    Expected output:
+    ```
+    Enter your username: alice
+    Enter your password: 
+    Login successful
+    Generating user asymmetric keys...
+    Uploading public key to remote server...
+    Public key successfuly set
+    SAVE your private key:
+    MIIEvgIBADANBgkqhkiG9w0BAQEF(...)
+    ```
+
 4. Create a sample directory:
 
     ```bash
     mkdir test
     cd test
-    echo "Beatriz, Afonso, Beatriz = bag" > students
+    echo "Beatriz, Afonso, Guilherme = bag" > students
     ```
 
 5. Create a project:
@@ -434,10 +503,31 @@ On your machine or on the `user` machine:
     bag create sirsa41
     ```
 
+    Expected output:
+    ```
+    Creating project: sirsa41
+    Generating project symmetric key...
+    Encrypting project key...
+    Uploading encrypted key to server...
+    Project successfuly created!
+    You can now push your files to the remote server
+    ```
+
 6. Push the local files:
 
     ```bash
     bag push
+    ```
+
+    Expected output:
+    ```
+    Checking local version against remote server...
+    Compressing project files...
+    Encrypting project files...
+    Signing commit...
+    Pushing project files to remote server..
+    Successful push
+    Commit: 6b52f62dbf584f5b6def5b1d814d6c844cbc3ba160827beaab1b4cc3e510a729
     ```
 
 7. Create a new file and modify the previous one:
@@ -454,10 +544,26 @@ On your machine or on the `user` machine:
     bag history
     ```
 
+    Expected output:
+    ```
+      Date                  User    Commit
+    > 2022-01-28 19:23      alice   b5a9f034a80703e66918c38c7eddc77aff3541aef762bc282734ca388a2f515f
+      2022-01-28 19:23      alice   6b52f62dbf584f5b6def5b1d814d6c844cbc3ba160827beaab1b4cc3e510a729
+
+    ```
+
 9. Share the project with `bob`:
 
     ```bash
     bag share bob
+    ```
+
+    Expected output:
+    ```
+    Retrieving bob public key...
+    Encrypting project key for bob...
+    Uploading new key to remote server...
+    Project successfuly shared with bob
     ```
 
 10. Logout of your account:
@@ -466,11 +572,12 @@ On your machine or on the `user` machine:
     bag logout
     ```
 
-11. Login to `bob`'s account:
-
-    ```bash
-    bag login
+    Expected output:
     ```
+    Logout successful
+    ```
+
+11. Login to `bob`'s account:
 
 12. Check `bob`'s projects:
 
@@ -478,12 +585,32 @@ On your machine or on the `user` machine:
     bag projects
     ```
 
+    Expected output:
+    ```
+    Date                    Name            Shared
+    2022-01-28 19:26        alice/sirsa41
+    ```
+
 13. Clone the project `alice/sirsa41`:
 
     ```bash
     cd
-    bag clone sirsa41
+    bag clone alice/sirsa41
     cd sirsa41
+    ```
+
+    Expected output:
+    ```
+    Cloning project: alice/sirsa41
+    Retrieving project information from remote server...
+    Checking local version against remote server...
+    Pulling latest commit from remote server...
+    Verifying file signature...
+    Decrypting project files...
+    Decompressing project files...
+    Successful pull!
+    Commit: b5a9f034a80703e66918c38c7eddc77aff3541aef762bc282734ca388a2f515f
+    Project alice/sirsa41 successfuly cloned
     ```
 
 14. Add a new file to the project and push it:
@@ -498,6 +625,14 @@ On your machine or on the `user` machine:
     ```bash
     bag history
     ```
+
+    Expected output:
+    ```
+      Date                  User    Commit
+    > 2022-01-28 19:28      bob     275ba06fd8e3b87f58168c5573a3fb3f3be86af1b9f6d273f2815c40826bd733
+      2022-01-28 19:23      alice   b5a9f034a80703e66918c38c7eddc77aff3541aef762bc282734ca388a2f515f
+      2022-01-28 19:23      alice   6b52f62dbf584f5b6def5b1d814d6c844cbc3ba160827beaab1b4cc3e510a729
+    ```
     
 16. Checkout an older commit:
 
@@ -505,17 +640,46 @@ On your machine or on the `user` machine:
     bag checkout <commit-version>
     ```
 
+    Expected output:
+    ```
+    Pulling commit 6b52f62dbf584f5b6def5b1d814d6c844cbc3ba160827beaab1b4cc3e510a729 from remote server...
+    Verifying file signature...
+    Decrypting project files...
+    Decompressing project files...
+    Successful pull!
+    Commit: 6b52f62dbf584f5b6def5b1d814d6c844cbc3ba160827beaab1b4cc3e510a729
+    ```
 
 ## Demo
 
-<!-- TODO: Give a tour of the best features of the application. Add screenshots when relevant. -->
+The main features of our application are described above.
+
+You can also check the Mongo Express and Redis Commander instance to get a better understanding of how data is organized and stored:
+
+### Mongo Express
+
+Accessible at [localhost:8081](localhost:8081).
+
+#### User Projects
+
+![mongo user projects](https://github.com/SIRS-A41/submission/raw/main/images/mongo-user-projects.png)
+#### Project History
+
+![mongo project history](https://github.com/SIRS-A41/submission/raw/main/images/mongo-project-history.png)
+
+
+### Redis Commander
+
+Accessible at [localhost:8082](localhost:8082).
+#### List of Users
+
+![redis users](https://github.com/SIRS-A41/submission/raw/main/images/redis-user.png)
 
 ## Additional Information
 
 ### Authors
 
 * 83805 - [**Afonso Raposo**](https://afonsoraposo.com)
-* 86391 - Beatriz Alves
 * 89451 - Guilherme Areias
 
 ### License
