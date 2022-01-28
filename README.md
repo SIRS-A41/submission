@@ -272,6 +272,7 @@ The [`firewalls`](https://github.com/SIRS-A41/firewalls.git) repo contains a scr
     sudo apt install openssh-server
     sudo systemctl enable sshd
     sudo systemctl start sshd
+    sudo apt install btrfs-progs -y
     ```
 
 4. Create a user called `sirs` with password `123123` for storing the project files:
@@ -281,6 +282,20 @@ The [`firewalls`](https://github.com/SIRS-A41/firewalls.git) repo contains a scr
     sudo passwd sirs
     ```
     *Note: the created user account will expire in 7 days.*
+
+5. Create a Btrfs Subvolume Subvolumes:
+
+    ```
+    sudo mkdir -v /data
+    sudo btrds subvolume create /data/projects
+    sudo mkdir -v /data/.snapshots
+    ```
+
+6. Create a cronjob for taking snapshots of the project files `sudo crontab -e`. Add the following line:
+
+    ```
+    20 */24 * * * /usr/bin/python3 /home/backup/snapshot-script.py
+    ```
 
 ##### Resources REST API
 
